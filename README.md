@@ -1,148 +1,148 @@
-# Wifi-Honeypot---Maximillian-Hagl-and-Austin-Metzler-Stretch-Project
 # ESP8266 Captive-Portal Wi-Fi Honeypot  
-**CSCI 342 – Computer Systems Concepts Final Project**
+**CSCI 342 – Computer Systems Concepts Final Project - Drury University**
 
-> Educational honeypot to demonstrate Wi-Fi, captive portals, HTTP vs HTTPS, logging, and embedded systems.  
-> **Not intended for misuse. Designed to log only safe metadata in a controlled lab environment.**
-
----
-
-## Overview
-
-This project implements a **Wi-Fi captive-portal honeypot** using a **NodeMCU ESP8266**.  
-It exposes an open access point (e.g., `Free Public WiFi`), serves a fake login page, and logs client metadata for analysis.
-
-Optionally, an **Arduino Uno + I²C LCD** acts as a **“honeypot monitor”** and **hit counter**, showing when new devices connect and submit the form.
-
-The project is designed to illustrate core **Computer Systems Concepts**:
-
-- Networking (802.11 Wi-Fi, IP, HTTP, DNS spoofing)
-- Sockets / HTTP server behaviour on embedded devices
-- DNS redirection for captive portals
-- OS / firmware interactions on the ESP8266 (tasks, timers, SPIFFS)
-- Logging & data collection on constrained hardware
-- Serial communication between microcontrollers (ESP8266 ⇄ Arduino Uno)
-- Embedded I/O (I²C LCD, GPIO wiring)
-
-All logging is designed for a **classroom lab** and uses **fake credentials only**. The code and documentation explicitly discourage real credential entry and **do not store raw password values**.
+> **⚠️ WARNING: EDUCATIONAL USE ONLY**  
+> This honeypot is designed for cybersecurity education in **controlled lab environments only**.  
+> **Never deploy on production networks or public spaces without proper authorization and disclosure.**  
+> All participants must provide informed consent. This project demonstrates security vulnerabilities for educational purposes.
 
 ---
 
-## Features
+## 📋 Overview
 
-- 📡 **Open Wi-Fi AP honeypot** (NodeMCU ESP8266)
-- 🌐 **Captive-portal style redirect**: all DNS requests are answered with the ESP’s IP
-- 📝 **Fake login page**: asks for username + password (for demo only)
-- 📊 **Safe metadata logging**:
-  - Timestamp
-  - Event type (connect, disconnect, form submit, HTTP request)
-  - Client IP and/or MAC (where available)
-  - User-Agent string
-  - Username (marked as demo/fake)
-  - Boolean flag indicating whether a password field was present  
-  - **Raw password values are not stored**
-- 💾 **On-device storage** using SPIFFS (or microSD if configured)
-- 🔌 **Serial log streaming** to Arduino Uno
-- 📟 **20×4 I²C LCD status display** (via Uno):
-  - Honeypot status (“Ready – Waiting…”)
-  - Last username seen (truncated)
-  - Simple hit counter / last event
-- 🧪 **Demo-oriented**: designed to show students how insecure HTTP logins are versus HTTPS
+This project implements a **Wi-Fi captive-portal honeypot** using a **NodeMCU ESP8266** that mimics the Drury University guest WiFi portal. It serves as a hands-on demonstration of wireless security concepts, captive portal vulnerabilities, and HTTP security risks.
 
----
+### 🎓 Educational Objectives
 
-## Hardware
+- Demonstrate how unsecured HTTP transmits credentials in plaintext  
+- Show how captive portals intercept network traffic  
+- Illustrate social engineering techniques in WiFi networks  
+- Provide hands-on experience with embedded systems and networking  
+- Teach ethical considerations in cybersecurity research  
 
-### Required
+### ⚖️ Critical Ethical Requirements
 
-| Component                      | Qty | Notes                                      |
-|--------------------------------|-----|--------------------------------------------|
-| NodeMCU ESP8266 (ESP-12E/12F) | 1   | Main Wi-Fi honeypot board                  |
-| USB cable (Micro-USB)         | 1   | Power + flashing ESP8266                   |
-| Breadboard / jumper wires     | 1   | No-solder prototyping                      |
-
-### Optional (LCD “hit counter”)
-
-| Component                        | Qty | Notes                              |
-|----------------------------------|-----|------------------------------------|
-| Arduino Uno (or compatible)      | 1   | Reads serial logs from ESP8266     |
-| 20×4 I²C LCD (0x27 / 0x3F addr) | 1   | Main honeypot status display       |
-| Dupont jumper wires              | 1   | For Uno ⇄ LCD and Uno ⇄ ESP8266    |
+1. **IRB Approval**: Required for any human subjects research  
+2. **Informed Consent**: All participants must know they're in a research study  
+3. **Controlled Environment**: Isolated lab network only  
+4. **No Real Credentials**: Use test accounts only  
+5. **Clear Disclosure**: Portal states it's a research project  
+6. **Secure Data Handling**: Logs stored locally, destroyed after analysis  
 
 ---
 
-## Wiring Summary (Arduino Uno + LCD + ESP8266)
+## ✨ Features
 
-> If you are not using the Uno/LCD portion, you can skip this section.
+### Core Honeypot (ESP8266)
 
-### Uno ⇄ I²C LCD
+- 📡 **Authentic Drury University Portal**: Professional HTML/CSS matching university branding  
+- 🌐 **DNS Redirection**: All DNS queries return ESP's IP for captive portal effect  
+- 🔓 **Open WiFi AP**: Creates **"Drury-Guest"** network with no password  
+- 📊 **Comprehensive Logging**:
+  - Timestamp (milliseconds)  
+  - Client MAC address  
+  - Username submitted  
+  - **Password submitted** (demonstrates plaintext transmission risk)  
+  - Client IP address  
+- 💾 **MicroSD Storage**: Logs to `/final_test_results.txt`  
+- 📡 **Serial Output**: Real-time credential display (format: `MAC|USER|PASS`)  
+- 🎯 **Captive Portal Detection**: Responds to Apple/Android captive portal checks  
 
-Typical I²C LCD backpack:
+### Optional Monitoring System (Arduino Uno + LCD)
 
-- **LCD VCC** → Uno **5V**
-- **LCD GND** → Uno **GND**
-- **LCD SDA** → Uno **A4**
-- **LCD SCL** → Uno **A5**
-
-(If your board is different, adjust pins accordingly.)
-
-### ESP8266 ⇄ Arduino Uno (Serial link)
-
-- **ESP8266 GND** → Uno **GND** (common ground is required)
-- **ESP8266 TX** → Uno **RX (D0)** *or* a SoftwareSerial RX pin on the Uno
-- (If using SoftwareSerial, connect to that RX pin and match the pin in code.)
-
-The ESP8266 prints log lines over its hardware Serial. The Uno reads these lines and updates the LCD.
-
----
-
-## Firmware / Software Overview
-
-### ESP8266 (NodeMCU) Firmware
-
-**Technologies:**
-
-- Arduino core for ESP8266
-- `ESP8266WiFi.h` for soft-AP mode
-- `DNSServer.h` for DNS spoofing
-- `ESP8266WebServer.h` (or similar) for HTTP server
-- `FS.h` / `SPIFFS.h` for on-device logging
-
-**Responsibilities:**
-
-1. Start a **soft AP** (e.g., SSID `Free Public WiFi`).
-2. Run a **DNS server** that answers all queries with the ESP AP IP (captive-portal effect).
-3. Run an **HTTP server** that:
-   - Serves the fake login page at `/`
-   - Handles `POST` to `/login`
-4. On each event:
-   - Build a **safe log line**, for example:
-
-     ```text
-     2025-11-27T21:03:42Z, LOGIN_SUBMIT, ip=192.168.4.2, username="demoUser", password_present=true, ua="Mozilla/5.0 ..."
-     ```
-
-   - Append to a log file on **SPIFFS** (e.g., `/logs/events.txt`)
-   - Mirror the same line over `Serial` for the Arduino Uno to consume
-
-> ⚠️ In the provided firmware, the **raw password value is never persisted to SPIFFS**. At most, it is handled in RAM to determine whether the field was present, then discarded.
+- 📟 **20×4 I²C LCD Display**:
+  - Real-time connection status  
+  - Last captured username  
+  - Connection counter  
+  - System messages  
+- 🔗 **Serial Communication**: ESP8266 → Arduino Uno data transfer  
+- 👁️ **Visual Monitoring**: Immediate feedback without serial console  
 
 ---
 
-### Arduino Uno + LCD Firmware
+## 🔧 Hardware Requirements
 
-**Libraries:**
+### Minimum Setup (ESP8266 Only)
 
-- `Wire.h`
-- `LiquidCrystal_I2C.h` (20×4 LCD driver)
+| Component          | Qty | Notes                     |
+|--------------------|-----|---------------------------|
+| NodeMCU ESP8266    | 1   | ESP-12E/12F recommended   |
+| MicroSD Card Module| 1   | SPI interface             |
+| MicroSD Card       | 1   | 1–32GB, FAT32 formatted   |
+| 5V Power Supply    | 1   | USB or regulated 5V       |
+| Breadboard & Wires | 1   | For prototyping           |
 
-**Responsibilities:**
+### Enhanced Setup (With Monitoring Display)
 
-1. Initialize I²C and the LCD.
-2. Show a boot screen, e.g.:
+| Component            | Qty | Notes                      |
+|----------------------|-----|----------------------------|
+| Arduino Uno          | 1   | LCD controller             |
+| 20×4 I²C LCD Display | 1   | Address 0x27 or 0x3F       |
+| I²C LCD Backpack     | 1   | If not integrated          |
+| Jumper Wires         | 1   | For all connections        |
 
-   ```text
-   Honeypot Monitor
-   Ready - Waiting...
-   Connect to:
-   Free Public WiFi
+---
+
+## 🔌 Wiring Configuration
+
+### ESP8266 + MicroSD Module
+
+**ESP8266 → MicroSD Module**
+
+| ESP8266 Pin | MicroSD Module Pin |
+|-------------|--------------------|
+| 3.3V        | VCC                |
+| GND         | GND                |
+| D5 (GPIO14) | SCK                |
+| D6 (GPIO12) | MISO               |
+| D7 (GPIO13) | MOSI               |
+| D8 (GPIO15) | CS (Chip Select)   |
+
+---
+
+### Optional: ESP8266 → Arduino Uno Serial
+
+**ESP8266 → Arduino Uno**
+
+| ESP8266 Pin | Arduino Uno Pin |
+|-------------|-----------------|
+| TX          | RX (Pin 0)      |
+| GND         | GND             |
+
+> ⚠️ **Important**: Disconnect TX/RX wires while programming the Arduino Uno.
+
+---
+
+### Optional: Arduino Uno → I²C LCD
+
+**Arduino Uno → I²C LCD**
+
+| Arduino Uno Pin | I²C LCD Pin |
+|-----------------|------------|
+| 5V              | VCC        |
+| GND             | GND        |
+| A4              | SDA        |
+| A5              | SCL        |
+
+---
+
+## 🏗️ Software Architecture
+
+### ESP8266 Components
+
+- **Wi-Fi SoftAP**: Creates open `"Drury-Guest"` network (default gateway `192.168.4.1`)  
+- **DNS Server**: Responds to all queries with ESP's IP (captive portal behavior)  
+- **Web Server**: HTTP server on port 80 with login/success pages  
+- **File System**: MicroSD logging via SPI  
+- **Serial Output**: Real-time data streaming (9600 baud)  
+
+### Data Flow
+
+```text
+Device Connects  →  DNS Redirect     →  Login Page       →  Form Submission
+      ↓                   ↓                  ↓                     ↓
+  MAC Captured      Portal Served        HTML/CSS UI            POST /login
+         ↓
+ Log: Timestamp | MAC | User | Pass
+         ↓
+    SD Card + Serial Output
