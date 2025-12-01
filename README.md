@@ -1,0 +1,2 @@
+# Wifi-Honeypot---Maximillian-Hagl-and-Austin-Metzler-Stretch-Project
+This "WiFi honeypot" uses a small circuit board with a WiFi module to emulate a fake network. When an individual connects to and enters login details on the spoofed sign-in page, the device captures the username and password they submit and submits it for documentation while displaying it also on a live LED screen within the configuration.
